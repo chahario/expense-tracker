@@ -1,0 +1,17 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "backend/Dockerfile"
+# Railway builds from repo root; Dockerfile context is ./backend
+
+[deploy]
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 60        # seconds before marking unhealthy (Spring startup)
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Environment variables to set in Railway dashboard:
+# SPRING_PROFILES_ACTIVE = prod
+# DATABASE_URL            = jdbc:postgresql://<host>:<port>/<db>   ← from Railway PG plugin
+# DATABASE_USERNAME       = <user>
+# DATABASE_PASSWORD       = <pass>
+# CORS_ALLOWED_ORIGIN     = https://your-app.vercel.app

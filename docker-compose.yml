@@ -1,0 +1,55 @@
+version: "3.9"
+
+# ─── Usage ───────────────────────────────────────────────────────────────────
+# Copy .env.example → .env and fill in values, then:
+#   docker-compose up --build        # start everything
+#   docker-compose down -v           # stop + delete volumes
+#   docker-compose logs -f backend   # stream backend logs
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-expenses}
+      POSTGRES_USER: ${POSTGRES_USER:-expense_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-expense_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-expense_user} -d ${POSTGRES_DB:-expenses}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-expenses}
+      DATABASE_USERNAME: ${POSTGRES_USER:-expense_user}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-expense_pass}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-*}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
